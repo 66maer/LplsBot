@@ -67,7 +67,7 @@ std::vector<BotBase::UserInfo> BotBase::DB_SelectBotList() {
         },
         &rtn, &cErrMsg);
     if (res != SQLITE_OK) {
-        api->OutputLog("查找报名信息错误:" + string(cErrMsg));
+        api->OutputLog("获取BaseDB数据错误:" + string(cErrMsg));
     }
     return rtn;
 }

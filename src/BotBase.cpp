@@ -1,11 +1,12 @@
+ï»¿#include "sdk/sdk.h"
 #include "BotBase.h"
-#include "sdk/sdk.h"
+#include "Bot.h"
 
 using namespace std;
 
 BotBase::BotBase():baseDB_(nullptr) {
     int rc = sqlite3_open("LplsBaseDB.db", &baseDB_);
-    thread([this] { // Ã¿ÈÕ¸üĞÂÓÃ»§ÁĞ±í
+    thread([this] { // æ¯æ—¥æ›´æ–°ç”¨æˆ·åˆ—è¡¨
         while (true) {
             UpdateBotList();
             std::this_thread::sleep_for(std::chrono::hours(24));
@@ -32,12 +33,12 @@ void BotBase::UpdateBotList() {
     bot_list_.clear();
     for (auto& user : users) {
         for (auto& gQQ : user.groupQQs) {
-            bot_list_[gQQ] = make_shared<Bot>();
+            bot_list_[gQQ] = make_shared<Bot>(user);
         }
     }
 }
 
-std::vector<BotBase::UserInfo> BotBase::DB_SelectBotList() {
+std::vector<UserInfo> BotBase::DB_SelectBotList() {
     vector<UserInfo> rtn;
     auto             t       = to_string(time(0));
     string           sql_str = "select * from user_table where end_time < " + t + ";";
@@ -46,13 +47,15 @@ std::vector<BotBase::UserInfo> BotBase::DB_SelectBotList() {
         baseDB_, sql_str.c_str(),
         [](auto vp, auto cnt, auto val, auto name) {
             auto              p = static_cast<vector<UserInfo>*>(vp);
-            BotBase::UserInfo q;
+            UserInfo q;
             for (int i = 0; i < cnt; ++i) {
                 string s = name[i];
                 if (s == "userQQ")
                     q.userQQ = val[i];
                 else if (s == "sdkQQ")
                     q.sdkQQ = val[i];
+                else if (s == "name")
+                    q.name = val[i];
                 else if (s == "groupQQs")
                     q.groupQQs = Mtools::Split(val[i]," ");
                 else if (s == "managerQQs")
@@ -67,7 +70,7 @@ std::vector<BotBase::UserInfo> BotBase::DB_SelectBotList() {
         },
         &rtn, &cErrMsg);
     if (res != SQLITE_OK) {
-        api->OutputLog("²éÕÒ±¨ÃûĞÅÏ¢´íÎó:" + string(cErrMsg));
+        api->OutputLog("è·å–BaseDBæ•°æ®é”™è¯¯:" + string(cErrMsg));
     }
     return rtn;
 }

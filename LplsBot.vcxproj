@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -97,6 +97,8 @@
     <None Include="src\sdk\api\api.inc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Bot.cpp" />
+    <ClCompile Include="src\BotBase.cpp" />
     <ClCompile Include="src\KaituanTools.cpp" />
     <ClCompile Include="src\library\shell.c" />
     <ClCompile Include="src\library\sqlite3.c" />
@@ -106,6 +108,8 @@
     <ClCompile Include="src\sdk\sdk.cc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Bot.h" />
+    <ClInclude Include="src\BotBase.h" />
     <ClInclude Include="src\KaituanTools.h" />
     <ClInclude Include="src\library\CImg.h" />
     <ClInclude Include="src\library\sqlite3.h" />

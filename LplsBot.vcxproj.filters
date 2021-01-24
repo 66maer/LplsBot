@@ -60,6 +60,12 @@
     <ClCompile Include="src\Bot.cpp">
       <Filter>Plugin</Filter>
     </ClCompile>
+    <ClCompile Include="src\ModuleBase.cpp">
+      <Filter>Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TeamModule.cpp">
+      <Filter>Plugin</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\sdk\sdk.h">
@@ -156,6 +162,15 @@
       <Filter>Plugin</Filter>
     </ClInclude>
     <ClInclude Include="src\Bot.h">
+      <Filter>Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ModuleBase.h">
+      <Filter>Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Types.h">
+      <Filter>Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TeamModule.h">
       <Filter>Plugin</Filter>
     </ClInclude>
   </ItemGroup>

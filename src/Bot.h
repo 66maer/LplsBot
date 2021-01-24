@@ -1,9 +1,20 @@
-#pragma once
+﻿#pragma once
+#include "stdafx.h"
+#include "sdk/sdk.h"
+
+class ModuleBase;
+
 class Bot {
 public:
+    Bot(const UserInfo& userinfo);
+
+    bool OnGroupMessage(const GroupMessageData& data);
+
 private:
-    std::string              userQQ_;
-    std::string              sdkQQ_;
-    std::vector<std::string> groupQQ_;
-    std::vector<std::string> managerQQ_;
+    void RegModule();
+
+private:
+    UserInfo user_info_;
+
+    std::vector<ModuleBase> module_list_;
 };

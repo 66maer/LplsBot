@@ -1,14 +1,24 @@
 ﻿#pragma once
 #include "stdafx.h"
-#include "Types.h"
+#include "sdk/sdk.h"
 
 class ModuleBase {
 public:
-    ModuleBase(std::uint32_t handle, int lv);
+    ModuleBase() : enable_(false), lv_(0) {}
 
-    virtual void init() = 0;
+    ModuleBase(bool enable, int lv) : enable_(enable), lv_(){};
 
-    virtual bool run(std::any data) = 0;
+    virtual bool ProcPrivateMess(const PrivateMessageData& data) {
+        return false;
+    };
+
+    virtual bool ProcGroupMess(const GroupMessageData& data) {
+        return false;
+    };
+
+    virtual bool ProcEvent(const EventData& data) {
+        return false;
+    };
 
     void set_enable(bool enable) {
         enable_ = enable;
@@ -18,19 +28,12 @@ public:
         return enable_;
     }
 
-    std::uint32_t handle() const {
-        return handle_;
-    }
-
     int lv() const {
         return lv_;
     }
 
 private:
-    
     bool enable_;
-
-    std::uint32_t handle_;  // 模块处理是信息类型
 
     int lv_;  // 模块优先级[-100~100]
 };

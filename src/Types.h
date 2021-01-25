@@ -13,11 +13,6 @@ struct UserInfo {
     time_t                   end_time;
 };
 
-enum Handle {
-    HandlePrivateMessage = 0x0001,
-    HandleGroupMessage   = 0x0002,
-};
-
 enum XinfaID {
     Xinfa_DaXia,
     Xinfa_HuaJian,

@@ -7,7 +7,6 @@
 #include <set>
 #include <cmath>
 #include <algorithm>
-#include <any>
 #include "MTools.h"
 #include "library/sqlite3.h"
 #include "library/CImg.h"

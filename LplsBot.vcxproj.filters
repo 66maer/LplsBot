@@ -60,9 +60,6 @@
     <ClCompile Include="src\Bot.cpp">
       <Filter>Plugin</Filter>
     </ClCompile>
-    <ClCompile Include="src\ModuleBase.cpp">
-      <Filter>Plugin</Filter>
-    </ClCompile>
     <ClCompile Include="src\TeamModule.cpp">
       <Filter>Plugin</Filter>
     </ClCompile>

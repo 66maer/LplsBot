@@ -102,7 +102,6 @@
     <ClCompile Include="src\KaituanTools.cpp" />
     <ClCompile Include="src\library\shell.c" />
     <ClCompile Include="src\library\sqlite3.c" />
-    <ClCompile Include="src\ModuleBase.cpp" />
     <ClCompile Include="src\plugin.cc" />
     <ClCompile Include="src\sdk\api\api.cc" />
     <ClCompile Include="src\sdk\encoding\encoding.cc" />

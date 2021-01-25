@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "stdafx.h";
 #include "sdk/sdk.h"
+#include "Types.h"
 
 struct Tuan;
 struct Ren;

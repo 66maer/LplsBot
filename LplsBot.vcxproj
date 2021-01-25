@@ -106,6 +106,7 @@
     <ClCompile Include="src\sdk\api\api.cc" />
     <ClCompile Include="src\sdk\encoding\encoding.cc" />
     <ClCompile Include="src\sdk\sdk.cc" />
+    <ClCompile Include="src\TeamModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Bot.h" />
@@ -114,6 +115,7 @@
     <ClInclude Include="src\library\CImg.h" />
     <ClInclude Include="src\library\sqlite3.h" />
     <ClInclude Include="src\library\sqlite3ext.h" />
+    <ClInclude Include="src\ModuleBase.h" />
     <ClInclude Include="src\MTools.h" />
     <ClInclude Include="src\sdk\api\api.h" />
     <ClInclude Include="src\sdk\encoding\encoding.h" />
@@ -140,6 +142,8 @@
     <ClInclude Include="src\sdk\utils\types.h" />
     <ClInclude Include="src\sdk\utils\utils-inl.h" />
     <ClInclude Include="src\stdafx.h" />
+    <ClInclude Include="src\TeamModule.h" />
+    <ClInclude Include="src\Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

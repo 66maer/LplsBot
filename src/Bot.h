@@ -24,6 +24,8 @@ public:
     }
 
 private:
+    bool Init();
+
     void RegModule();
 
 private:

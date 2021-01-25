@@ -9,4 +9,12 @@ public:
 
 private:
     bool Init();
+
+    bool IsManager(const GroupMessageData& data);
+
+    bool Trigger(const std::string& mess, const std::vector<std::string>& keys, bool first = true) const;
+
+    void CreateTeamProc(const GroupMessageData& data);
+
+    bool CheckCreatTeamFormat(const GroupMessageData& data, Tuan* tuan);
 };

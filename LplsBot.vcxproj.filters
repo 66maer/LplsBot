@@ -51,9 +51,6 @@
     <ClCompile Include="src\library\sqlite3.c">
       <Filter>library</Filter>
     </ClCompile>
-    <ClCompile Include="src\KaituanTools.cpp">
-      <Filter>Plugin</Filter>
-    </ClCompile>
     <ClCompile Include="src\BotBase.cpp">
       <Filter>Plugin</Filter>
     </ClCompile>
@@ -151,9 +148,6 @@
     </ClInclude>
     <ClInclude Include="src\library\sqlite3ext.h">
       <Filter>library</Filter>
-    </ClInclude>
-    <ClInclude Include="src\KaituanTools.h">
-      <Filter>Plugin</Filter>
     </ClInclude>
     <ClInclude Include="src\BotBase.h">
       <Filter>Plugin</Filter>

@@ -4,9 +4,9 @@
 
 class ModuleBase {
 public:
-    ModuleBase() : enable_(false), lv_(0) {}
+    ModuleBase(sqlite3* base_db, sqlite3* db) : base_db_(base_db), db_(db), enable_(false), lv_(0) {}
 
-    ModuleBase(bool enable, int lv) : enable_(enable), lv_(){};
+    ModuleBase(sqlite3* base_db, sqlite3* db, bool enable, int lv) : base_db_(base_db), db_(db), enable_(enable), lv_(){};
 
     virtual bool ProcPrivateMess(const PrivateMessageData& data) {
         return false;
@@ -32,8 +32,24 @@ public:
         return lv_;
     }
 
+    void set_db(sqlite3* db) {
+        db_ = db;
+    }
+
+    sqlite3* db() const {
+        return db_;
+    }
+
+     sqlite3* base_db() const {
+        return base_db_;
+    }
+
 private:
     bool enable_;
 
     int lv_;  // 模块优先级[-100~100]
+
+    sqlite3* base_db_;
+
+    sqlite3* db_;
 };

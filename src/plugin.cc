@@ -2,7 +2,8 @@
 #include "sdk/sdk.h"
 
 #include "stdafx.h"
-#include "KaituanTools.h"
+#include "BotBase.h"
+#include "Bot.h"
 
 #include <cstdint>
 #include <string>
@@ -16,8 +17,8 @@ using namespace std;
 const char* Configuration = R"CFG(
 {
     "插件名称": "拉普拉斯妖",
-    "插件作者": "maer、GM",
-    "插件版本": "0.3.26",
+    "插件作者": "maer、GM、FLL",
+    "插件版本": "0.4.36",
     "插件说明": "<这里填写插件说明>",
     "所需权限":
     {
@@ -29,13 +30,14 @@ const char* Configuration = R"CFG(
         "取群列表": "测试用",
         "取群成员列表": "测试用",
         "取管理层列表": "测试用",
-        "上传群图片":"发送图片"
+        "上传群图片":"发送图片",
+        "强制取昵称":"强制取昵称",
+        "取群名片":"取群名片"
     }
 }
 )CFG";
 
-sqlite3*   db         = nullptr;
-KaituanTools* kaituan_model = nullptr;
+BotBase* botbase_ptr;
 
 // 事件处理函数 请勿在函数中执行上传文件等耗时操作，此类操作请另开线程执行
 
@@ -180,8 +182,11 @@ EventProcessEnum OnGroupMessage(GroupMessageData data)
 
     std::string content = data.MessageContent;
     
-    if (kaituan_model->Run(data)) {
-        return EventProcessEnum::Ignore;
+    auto bot = botbase_ptr->GetBot(to_string(data.ThisQQ), to_string(data.MessageGroupQQ));
+    if (bot != nullptr) {
+        if (bot->OnGroupMessage(data)) {
+            return EventProcessEnum::Ignore;
+        }
     }
 
     // 判断消息内容
@@ -193,32 +198,6 @@ EventProcessEnum OnGroupMessage(GroupMessageData data)
         if (retcode != 0)
         {
             api->OutputLog(sum_string("临时消息发送失败: ", retcode));
-        }
-    }
-    else if (content == "CornerstoneSDK测试获取群成员列表")
-    {
-        vector<GroupMemberInformation> member_list;
-        // 获取群成员列表
-        auto size = api->GetGroupMemberList(data.ThisQQ, data.MessageGroupQQ, member_list);
-        // 判断是否获取成功
-        if (size == 0)
-        {
-            api->OutputLog("群成员列表获取失败: 返回的size为0");
-            api->SendGroupMessage(data.ThisQQ, data.MessageGroupQQ, "群成员列表获取失败: 返回的size为0");
-        }
-        else
-        {
-            api->OutputLog(sum_string("群成员列表获取成功: 返回的size为", size));
-            string members;
-            // 最多只显示5个群成员
-            if (size > 5)
-                size = 5;
-            for (decltype(size) i = 0; i < size; i++)
-            {
-                auto member_info = member_list[i];
-                members += sum_string(member_info.QQNumber, ": ", member_info.Name, "\n");
-            }
-            api->SendGroupMessage(data.ThisQQ, data.MessageGroupQQ, members);
         }
     }
     else
@@ -234,9 +213,8 @@ EventProcessEnum OnGroupMessage(GroupMessageData data)
 // 插件卸载事件
 EventProcessEnum OnUninstall()
 {
-    sqlite3_close(db);
-    delete kaituan_model;
-    kaituan_model = nullptr;
+    delete botbase_ptr;
+    botbase_ptr = nullptr;
     return EventProcessEnum::Ignore;
 }
 
@@ -249,8 +227,7 @@ EventProcessEnum OnSettings()
 // 插件被启用事件
 EventProcessEnum OnEnabled()
 {
-    int rc = sqlite3_open("mydb.db", &db);
-    kaituan_model = new KaituanTools();
+    botbase_ptr = new BotBase();
     return EventProcessEnum::Ignore;
 }
 

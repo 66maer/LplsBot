@@ -7,7 +7,9 @@ class ModuleBase;
 
 class Bot {
 public:
-    Bot(const UserInfo& userinfo);
+    Bot(const UserInfo& userinfo, sqlite3* base_db);
+
+    ~Bot();
 
     bool OnPrivateMessage(const PrivateMessageData& data);
 
@@ -30,6 +32,10 @@ private:
 
 private:
     UserInfo user_info_;
+    
+    sqlite3* base_db_;
 
-    std::vector<ModuleBase> module_list_;
+    sqlite3* db_;
+
+    std::vector<std::shared_ptr<ModuleBase>> module_list_;
 };

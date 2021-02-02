@@ -13,6 +13,4 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-extern sqlite3* db;
-
 

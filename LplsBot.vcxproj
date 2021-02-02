@@ -99,7 +99,6 @@
   <ItemGroup>
     <ClCompile Include="src\Bot.cpp" />
     <ClCompile Include="src\BotBase.cpp" />
-    <ClCompile Include="src\KaituanTools.cpp" />
     <ClCompile Include="src\library\shell.c" />
     <ClCompile Include="src\library\sqlite3.c" />
     <ClCompile Include="src\plugin.cc" />
@@ -111,7 +110,6 @@
   <ItemGroup>
     <ClInclude Include="src\Bot.h" />
     <ClInclude Include="src\BotBase.h" />
-    <ClInclude Include="src\KaituanTools.h" />
     <ClInclude Include="src\library\CImg.h" />
     <ClInclude Include="src\library\sqlite3.h" />
     <ClInclude Include="src\library\sqlite3ext.h" />

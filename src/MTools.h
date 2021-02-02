@@ -168,5 +168,17 @@ namespace Mtools {
         bool                    eoq_;
     };
 
+    /**
+     * @brief 获取时间的格式化结果
+     * @param fmt 格式化方式 Y:年,m:月,d:日,H:时,M:分,S:秒
+     * @return 格式化后的字符串
+     */
+    static std::string GetTimeFmt(const time_t& timec, const std::string& fmt = "%Y-%m-%d_%H:%M:%S") {
+        tm   now_tm;
+        char buffer[64];
+        localtime_s(&now_tm, &timec);
+        strftime(buffer, sizeof(buffer), fmt.c_str(), &now_tm);
+        return buffer;
+    }
 
 }  // namespace QTtools

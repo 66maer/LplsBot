@@ -109,6 +109,7 @@ struct Worker {
     Xinfa        xinfa;
     WorkerType   type;
     WorkerStatus status;
+    time_t       update_time;
 };
 
 struct Team {
@@ -131,4 +132,9 @@ struct Team {
 struct ReMess {
     int         percent;
     std::string mess;
+};
+
+struct VSInfo {
+    double value;
+    std::string str;
 };

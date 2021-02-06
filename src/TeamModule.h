@@ -21,6 +21,10 @@ private:
 
     bool CheckCreatTeamFormat(const GroupMessageData& data, Team* team) const;
 
+    void OpenTeamProc(const GroupMessageData& data) const;
+
+    bool CheckOpenTeamFormat(const GroupMessageData& data, std::string* team_name) const;
+
     void CancelTeamProc(const GroupMessageData& data) const;
 
     bool CheckCancelTeamFormat(const GroupMessageData& data, std::string* team_name) const;
@@ -39,11 +43,21 @@ private:
 
     bool CheckSignUpFormat(const GroupMessageData& data, Worker* worker, std::string* team_name) const;
 
-    bool CheckTeamCnfg(const GroupMessageData& data, const Team& team, const Worker& worker) const;
+    bool CheckTeamCnfg(const GroupMessageData& data, const Team& team, const Worker& worker, Worker* swap_worker) const;
 
     void CancelSignUpProc(const GroupMessageData& data) const;
 
     bool CancelSignUpFormat(const GroupMessageData& data, std::string* team_name, std::string* game_id) const;
+
+    void GuGuGuSignUpProc(const GroupMessageData& data) const;
+
+    bool GuGuGuSignUpFormat(const GroupMessageData& data, std::string* team_name, std::string* game_id) const;
+
+    std::vector<VSInfo> GetGuGuGuValue(const std::string& QQ) const;
+
+    void SelectGuGuGuProc(const GroupMessageData& data);
+
+    bool CheckSelectGuGuGuFormat(const GroupMessageData& data, std::string* QQ) const;
 
     bool SelectZone(const std::string& zone_nkname, Zone* zone) const;
 
@@ -62,12 +76,14 @@ private:
     bool DB_SelectTeam(std::vector<Team>* teams) const;
 
     bool DB_SelectTeam(const std::string& zone_name, Team* team) const;
-    
+
     bool DB_UpdateTeam(int team_id, const Team& team) const;
 
     bool DB_InsertSignUp(int team_id, const Worker& worker) const;
 
     bool DB_SelectSignUp(const int team_id, std::vector<Worker>* workers) const;
+
+    bool DB_SelectSignUp(const std::string& ownerQQ, std::vector<Worker>* workers) const;
 
     bool DB_UpdateSignUpStatus(int team_id, const std::string& game_id, WorkerStatus status) const;
 

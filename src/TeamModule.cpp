@@ -21,6 +21,9 @@ bool TeamModule::ProcGroupMess(const GroupMessageData& data) {
     else if (Trigger(mess, { "查团" }) || Trigger(mess, { "有团吗", "有团咩", "有团么", "有本吗", "有本咩", "有本么", "打本吗", "开团吗" }, false)) {
         SelectTeamProc(data);
     }
+    else if (Trigger(mess, { "开组" })) {
+        OpenTeamProc(data);
+    }
     else if (Trigger(mess, { "取消开团" })) {
         CancelTeamProc(data);
     }
@@ -29,6 +32,12 @@ bool TeamModule::ProcGroupMess(const GroupMessageData& data) {
     }
     else if (Trigger(mess, { "取消报名" })) {
         CancelSignUpProc(data);
+    }
+    else if (Trigger(mess, { "咕咕咕" })) {
+        GuGuGuSignUpProc(data);
+    }
+    else if (Trigger(mess, { "查鸽子值" })) {
+        SelectGuGuGuProc(data);
     }
     else {
         return false;
@@ -100,8 +109,10 @@ void TeamModule::ReplyMess(const GroupMessageData& data, const std::string& key,
             }
         api->SendGroupMessage(data.ThisQQ, data.MessageGroupQQ, reply.mess);
     }
+    else {
+        api->OutputLog("没有对应的回复内容：" + key);
+    }
     return;
-    api->OutputLog("没有对应的回复内容：" + key);
 }
 
 bool TeamModule::Trigger(const std::string& mess, const std::vector<std::string>& keys, bool first) const {
@@ -159,6 +170,45 @@ bool TeamModule::CheckCreatTeamFormat(const GroupMessageData& data, Team* team) 
         ReplyMess(data, "开团格式错误");
         return false;
     }
+}
+
+void TeamModule::OpenTeamProc(const GroupMessageData& data) const {
+    string team_name;
+    if (CheckOpenTeamFormat(data, &team_name)) {
+        if (IsManager(data)) {
+            Team team;
+            if (!DB_SelectTeam(team_name, &team)) {
+                ReplyMess(data, "查无此团", { team_name });
+                return;
+            }
+            if (team.status == TeamStatus::SigningUp) {
+                team.status       = TeamStatus::Processing;
+                team.process_time = data.MessageReceiveTime;
+                DB_UpdateTeam(team.team_id, team);
+                ReplyMess(data, "通用字符串", { "开组成功！" });
+            }
+            else {
+                ReplyMess(data, "通用字符串", { "正在开组中！" });
+            }
+        }
+        else {
+            ReplyMess(data, "非管理员", { to_string(data.SenderQQ), "开组" });
+        }
+    }
+}
+
+bool TeamModule::CheckOpenTeamFormat(const GroupMessageData& data, std::string* team_name) const {
+    string mess = data.MessageContent;
+    auto   strs = Mtools::Split(mess, " ");
+    if (strs.size() == 2) {
+        *team_name = strs[1];
+        return true;
+    }
+    else {
+        ReplyMess(data, "开组格式错误");
+        return false;
+    }
+    return false;
 }
 
 void TeamModule::CancelTeamProc(const GroupMessageData& data) const {
@@ -451,16 +501,16 @@ bool TeamModule::BuildTeamTable(const Team& team, std::vector<std::vector<Worker
             tryadd({ 3, 1, 2, 0, 4 }, worker);
         }
         else if (worker.xinfa.xinfa_type_1 == "T") {
-            tryadd({ 4, 3, 1, 2, 0 }, worker);
+            tryadd({ 4, 1, 3, 0, 2 }, worker);
         }
         else if (worker.xinfa.xinfa_type_1 == "nai") {
-            tryadd({ 4, 1, 0, 3, 2 }, worker);
+            tryadd({ 4, 3, 2, 1, 0 }, worker);
         }
         else if (worker.xinfa.xinfa_type_2 == "nei_dps") {
-            tryadd({ 0, 1, 3, 2, 4 }, worker);
+            tryadd({ 2, 3, 1, 0, 4 }, worker);
         }
         else if (worker.xinfa.xinfa_type_2 == "wai_dps") {
-            tryadd({ 2, 3, 1, 0, 4 }, worker);
+            tryadd({ 0, 1, 3, 2, 4 }, worker);
         }
     }
     return true;
@@ -496,12 +546,26 @@ void TeamModule::SignUpProc(const GroupMessageData& data) const {
                 return;
             }
         }
-        if (new_worker.status == WorkerStatus::Note || CheckTeamCnfg(data, team, new_worker)) {
+        if (team.status == TeamStatus::Processing) {
+            ReplyMess(data, "开组不能报名", { team_name, Mtools::GetTimeFmt(team.process_time) });
+            return;
+        }
+        Worker swap_worker;
+        if (new_worker.status == WorkerStatus::Note || CheckTeamCnfg(data, team, new_worker, &swap_worker)) {
             for (auto& wk : team.worker_list) {
                 if ((new_worker.status != WorkerStatus::Note && new_worker.ownerQQ == wk.ownerQQ) || new_worker.game_id == wk.game_id) {
                     ReplyMess(data, "重复报名", { wk.game_id, wk.xinfa.xinfa_name, wk.ownerQQ, wk.sendQQ });
                     return;
                 }
+            }
+            if (!swap_worker.game_id.empty()) {
+                auto st = WorkerStatus::Note;
+                DB_UpdateSignUpStatus(team.team_id, swap_worker.game_id, st);
+                auto v = GetGuGuGuValue(swap_worker.ownerQQ);
+                if (v[0].value >= 0) {
+                    v[0].value = -0.00001;
+                }
+                ReplyMess(data, "顶坑", { swap_worker.ownerQQ, swap_worker.game_id, swap_worker.xinfa.xinfa_name, to_string(v[0].value) });
             }
             if (DB_InsertSignUp(team.team_id, new_worker))
                 ReplyMess(data, "报名成功", { new_worker.game_id, new_worker.xinfa.xinfa_name });
@@ -518,6 +582,11 @@ bool TeamModule::CheckSignUpFormat(const GroupMessageData& data, Worker* worker,
         if (regex_match(strs.back(), regex("\\[@[0-9]{5,14}\\]"))) {
             strs.back().pop_back();
             worker->ownerQQ = strs.back().substr(2);
+            strs.pop_back();
+        }
+        else if (regex_match(strs.back(), regex("<[0-9]{5,14}>"))) {
+            strs.back().pop_back();
+            worker->ownerQQ = strs.back().substr(1);
             strs.pop_back();
         }
         if (strs.size() == 4) {
@@ -557,15 +626,46 @@ bool TeamModule::CheckSignUpFormat(const GroupMessageData& data, Worker* worker,
     return false;
 }
 
-bool TeamModule::CheckTeamCnfg(const GroupMessageData& data, const Team& team, const Worker& worker) const {
-    auto& cnfg = team.zone.zone_config;
-    auto& now  = team.now_cnfg;
-    auto& me   = worker.xinfa;
-    int   sum  = now.T.first + now.nai.first + now.dps.first + now.rich.first;
-    int   n    = 0;
+bool TeamModule::CheckTeamCnfg(const GroupMessageData& data, const Team& team, const Worker& worker, Worker* swap_worker) const {
+    auto& cnfg      = team.zone.zone_config;
+    auto& now       = team.now_cnfg;
+    auto& me        = worker.xinfa;
+    auto  me_gu_val = GetGuGuGuValue(worker.ownerQQ)[0].value;
+    int   sum       = now.T.first + now.nai.first + now.dps.first + now.rich.first;
+    int   n         = 0;
+
+    vector<pair<Worker, double>> gugugus;
+    for (auto& wk : team.worker_list) {
+        auto guvalue = GetGuGuGuValue(wk.ownerQQ);
+        if (guvalue[0].value < 0) {
+            gugugus.push_back({ wk, guvalue[0].value });
+        }
+    }
+    auto tryReplace = [&gugugus, &me, &me_gu_val, &swap_worker](const string& xf_t2) {
+        if (gugugus.empty() || me_gu_val < 0)
+            return false;
+        vector<pair<Worker, double>> swapwork;
+        for (auto& [gu, guv] : gugugus) {
+            if (guv < 0 && xf_t2 == me.xinfa_type_2 && gu.xinfa.xinfa_type_2 == me.xinfa_type_2) {
+                swapwork.push_back({ gu, guv });
+            }
+        }
+        double minv = 0;
+        for (auto& [gu, guv] : swapwork) {
+            if (guv < minv) {
+                *swap_worker = gu;
+                minv         = guv;
+            }
+        }
+        if (swapwork.empty())
+            return false;
+        return true;
+    };
     if (sum >= team.zone.zone_size) {
-        ReplyMess(data, "车满");
-        return false;
+        if (!tryReplace(me.xinfa_type_2)) {
+            ReplyMess(data, "车满");
+            return false;
+        }
     }
     if ((worker.type == WorkerType::Rich || worker.type == WorkerType::OverRich)) {
         if (now.rich.first >= cnfg.rich.second) {
@@ -580,57 +680,73 @@ bool TeamModule::CheckTeamCnfg(const GroupMessageData& data, const Team& team, c
         }
     }
     if (me.xinfa_type_1 == "T" && now.T.first >= cnfg.T.second) {
-        ReplyMess(data, "T满");
-        return false;
+        if (!tryReplace(me.xinfa_type_2)) {
+            ReplyMess(data, "T满");
+            return false;
+        }
     }
-    if (me.xinfa_type_1 == "nai" && now.nai.first >= cnfg.nai.second) {
-        ReplyMess(data, "奶满");
-        return false;
+    else if (me.xinfa_type_1 == "nai" && now.nai.first >= cnfg.nai.second) {
+        if (!tryReplace(me.xinfa_type_2)) {
+            ReplyMess(data, "奶满");
+            return false;
+        }
     }
-    if (me.xinfa_type_1 == "dps" && now.dps.first >= cnfg.dps.second) {
-        ReplyMess(data, "dps满");
-        return false;
-    }
-    if (me.xinfa_type_2 == "nei_dps" && now.nei_dps.first >= cnfg.nei_dps.second) {
-        ReplyMess(data, "内满");
-        return false;
-    }
-    if (me.xinfa_type_2 == "wai_dps" && now.wai_dps.first >= cnfg.wai_dps.second) {
-        ReplyMess(data, "外满");
-        return false;
+    else {
+        if (me.xinfa_type_1 == "dps" && now.dps.first >= cnfg.dps.second) {
+            if (!tryReplace(me.xinfa_type_2)) {
+                ReplyMess(data, "dps满");
+                return false;
+            }
+        }
+        else if (me.xinfa_type_2 == "nei_dps" && now.nei_dps.first >= cnfg.nei_dps.second) {
+            if (!tryReplace(me.xinfa_type_2)) {
+                ReplyMess(data, "内满");
+                return false;
+            }
+        }
+        else if (me.xinfa_type_2 == "wai_dps" && now.wai_dps.first >= cnfg.wai_dps.second) {
+            if (!tryReplace(me.xinfa_type_2)) {
+                ReplyMess(data, "外满");
+                return false;
+            }
+        }
     }
     if (cnfg.xinfas[static_cast<int>(me.xinfa_id)].second == 0) {
         ReplyMess(data, "反思心法", { me.xinfa_name });
         return false;
     }
     if (now.xinfas[static_cast<int>(me.xinfa_id)].first >= cnfg.xinfas[static_cast<int>(me.xinfa_id)].second) {
-        ReplyMess(data, "该心法满", { me.xinfa_name });
-        return false;
-    }
-    if (me.xinfa_type_1 != "T" && sum >= team.zone.zone_size - cnfg.T.first + now.T.first) {
-        ReplyMess(data, "缺T");
-        return false;
-    }
-    if (me.xinfa_type_1 != "nai" && sum >= team.zone.zone_size - cnfg.nai.first + now.nai.first) {
-        ReplyMess(data, "缺奶");
-        return false;
-    }
-    if (me.xinfa_type_1 != "dps" && sum >= team.zone.zone_size - cnfg.dps.first + now.dps.first) {
-        ReplyMess(data, "缺dps");
-        return false;
-    }
-    if (me.xinfa_type_2 != "nei_dps" && sum >= team.zone.zone_size - cnfg.nei_dps.first + now.nei_dps.first) {
-        ReplyMess(data, "缺内");
-        return false;
-    }
-    if (me.xinfa_type_2 != "wai_dps" && sum >= team.zone.zone_size - cnfg.wai_dps.first + now.wai_dps.first) {
-        ReplyMess(data, "缺外");
-        return false;
-    }
-    for (int i = 0; i < cnfg.xinfas.size(); ++i) {
-        if (static_cast<int>(me.xinfa_id) != i && sum >= team.zone.zone_size - cnfg.xinfas[i].first + now.xinfas[i].first) {
-            ReplyMess(data, "缺此心法");
+        if (!tryReplace(me.xinfa_type_2)) {
+            ReplyMess(data, "该心法满", { me.xinfa_name });
             return false;
+        }
+    }
+    if (swap_worker->game_id.empty()) {
+        if (me.xinfa_type_1 != "T" && sum >= team.zone.zone_size - cnfg.T.first + now.T.first) {
+            ReplyMess(data, "缺T");
+            return false;
+        }
+        if (me.xinfa_type_1 != "nai" && sum >= team.zone.zone_size - cnfg.nai.first + now.nai.first) {
+            ReplyMess(data, "缺奶");
+            return false;
+        }
+        if (me.xinfa_type_1 != "dps" && sum >= team.zone.zone_size - cnfg.dps.first + now.dps.first) {
+            ReplyMess(data, "缺dps");
+            return false;
+        }
+        if (me.xinfa_type_2 != "nei_dps" && sum >= team.zone.zone_size - cnfg.nei_dps.first + now.nei_dps.first) {
+            ReplyMess(data, "缺内");
+            return false;
+        }
+        if (me.xinfa_type_2 != "wai_dps" && sum >= team.zone.zone_size - cnfg.wai_dps.first + now.wai_dps.first) {
+            ReplyMess(data, "缺外");
+            return false;
+        }
+        for (int i = 0; i < cnfg.xinfas.size(); ++i) {
+            if (static_cast<int>(me.xinfa_id) != i && sum >= team.zone.zone_size - cnfg.xinfas[i].first + now.xinfas[i].first) {
+                ReplyMess(data, "缺此心法");
+                return false;
+            }
         }
     }
     return true;
@@ -666,6 +782,10 @@ void TeamModule::CancelSignUpProc(const GroupMessageData& data) const {
                 return;
             }
         }
+        if (team.status == TeamStatus::Processing) {
+            ReplyMess(data, "已经开组", { team.team_name, Mtools::GetTimeFmt(team.process_time) });
+            return;
+        }
         if (game_id.empty()) {
             for (auto& wk : team.worker_list) {
                 if (wk.ownerQQ == QQ) {
@@ -678,7 +798,7 @@ void TeamModule::CancelSignUpProc(const GroupMessageData& data) const {
             for (auto& wk : team.worker_list) {
                 if (wk.game_id == game_id) {
                     if (wk.ownerQQ == QQ || wk.sendQQ == QQ || IsManager(data)) {
-                        auto st = team.status == TeamStatus::Processing ? WorkerStatus::Pigeon : WorkerStatus::Cancel;
+                        auto st = WorkerStatus::Cancel;
                         DB_UpdateSignUpStatus(team.team_id, game_id, st);
                         ReplyMess(data, "取消报名成功", { game_id, wk.xinfa.xinfa_name });
                         return;
@@ -721,6 +841,149 @@ bool TeamModule::CancelSignUpFormat(const GroupMessageData& data, std::string* t
         return false;
     }
     return false;
+}
+
+void TeamModule::GuGuGuSignUpProc(const GroupMessageData& data) const {
+    string team_name, game_id;
+    auto   QQ = to_string(data.SenderQQ);
+    if (CancelSignUpFormat(data, &team_name, &game_id)) {
+        Team team;
+        if (team_name.empty()) {
+            std::vector<Team> teams;
+            DB_SelectTeam(&teams);
+            if (teams.empty()) {
+                ReplyMess(data, "目前没有团");
+                return;
+            }
+            else if (teams.size() == 1) {
+                team = teams.front();
+            }
+            else {
+                string reply;
+                for (auto& t : teams) {
+                    reply += "\n“" + t.team_name + "” " + t.zone.zone_name + " " + t.remark;
+                }
+                ReplyMess(data, "需要指定车名", { to_string(teams.size()), reply });
+                return;
+            }
+        }
+        else {
+            if (!DB_SelectTeam(team_name, &team)) {
+                ReplyMess(data, "查无此团", { team_name });
+                return;
+            }
+        }
+        if (team.status == TeamStatus::SigningUp) {
+            ReplyMess(data, "只有开组才咕", { team.team_name });
+            return;
+        }
+        if (game_id.empty()) {
+            for (auto& wk : team.worker_list) {
+                if (wk.ownerQQ == QQ) {
+                    game_id = wk.game_id;
+                    break;
+                }
+            }
+        }
+        if (!game_id.empty()) {
+            for (auto& wk : team.worker_list) {
+                if (wk.game_id == game_id) {
+                    if (wk.ownerQQ == QQ || wk.sendQQ == QQ || IsManager(data)) {
+                        auto st = WorkerStatus::Pigeon;
+                        DB_UpdateSignUpStatus(team.team_id, game_id, st);
+                        auto guinfo = GetGuGuGuValue(wk.ownerQQ);
+                        ReplyMess(data, "咕咕咕成功", { wk.ownerQQ, game_id, wk.xinfa.xinfa_name, to_string(guinfo[0].value) });
+                        return;
+                    }
+                    else {
+                        ReplyMess(data, "非管理员", { to_string(data.SenderQQ), "帮别人咕咕咕" });
+                        return;
+                    }
+                }
+            }
+        }
+        ReplyMess(data, "未报名", { game_id });
+        return;
+    }
+}
+
+bool TeamModule::GuGuGuSignUpFormat(const GroupMessageData& data, std::string* team_name, std::string* game_id) const {
+    string mess = data.MessageContent;
+    auto   strs = Mtools::Split(mess, " ");
+    if (strs.size() == 3) {
+        *team_name = strs[1];
+        *game_id   = strs[2];
+        return true;
+    }
+    else if (strs.size() == 2) {
+        *game_id = strs[1];
+        return true;
+    }
+    else if (strs.size() == 1) {
+        return true;
+    }
+    else {
+        ReplyMess(data, "咕咕咕格式错误");
+        return false;
+    }
+    return false;
+}
+
+std::vector<VSInfo> TeamModule::GetGuGuGuValue(const std::string& QQ) const {
+    vector<VSInfo> info{ { 0, "" } };
+    vector<Worker> workers;
+    DB_SelectSignUp(QQ, &workers);
+    if (!workers.empty()) {
+        int    x   = workers.size();
+        int    y   = 0;
+        double gu  = 0;
+        auto   now = time(0);
+        for (auto& wk : workers) {
+            if (wk.status == WorkerStatus::Pigeon) {
+                y++;
+                double day = (now - wk.update_time) / 172800.0 - 5;
+                day        = day > 100 ? 100 : day;
+                auto v     = 100 / ((1 + exp(day)) * x);
+                gu += v;
+                info.push_back({ v, Mtools::GetTimeFmt(wk.update_time) + " " + wk.game_id + " " + wk.xinfa.xinfa_name });
+            }
+        }
+        info[0].value = log(x + 5) / log(1.2) - log(6) / log(1.2) - gu;
+    }
+    return info;
+}
+
+void TeamModule::SelectGuGuGuProc(const GroupMessageData& data) {
+    string QQ;
+    if (CheckSelectGuGuGuFormat(data, &QQ)) {
+        auto v = GetGuGuGuValue(QQ);
+        ReplyMess(data, "查鸽子值", { to_string(v[0].value) });
+    }
+}
+
+bool TeamModule::CheckSelectGuGuGuFormat(const GroupMessageData& data, std::string* QQ) const {
+    string mess = data.MessageContent;
+    auto   strs = Mtools::Split(mess, " ");
+    if (strs.size() == 2) {
+        if (regex_match(strs.back(), regex("\\[@[0-9]{5,14}\\]"))) {
+            strs.back().pop_back();
+            *QQ = strs.back().substr(2);
+            strs.pop_back();
+        }
+        else if (regex_match(strs.back(), regex("<[0-9]{5,14}>"))) {
+            strs.back().pop_back();
+            *QQ = strs.back().substr(1);
+            strs.pop_back();
+        }
+        else {
+            ReplyMess(data, "查鸽值格式错误", { strs.back() });
+            return false;
+        }
+    }
+    else {
+        *QQ = to_string(data.SenderQQ);
+    }
+    return true;
 }
 
 bool TeamModule::SelectZone(const std::string& zone_nkname, Zone* zone) const {
@@ -1030,7 +1293,7 @@ bool TeamModule::DB_UpdateTeam(int team_id, const Team& team) const {
     sql_str += "finish_time = " + to_string(team.finish_time) + ",";
     sql_str += "debut_qq = '" + team.debutQQ + "',";
     sql_str += "glod = " + to_string(team.glod) + ",";
-    sql_str += "goods = '" + team.goods + "';";
+    sql_str += "goods = '" + team.goods + "' where team_id = " + to_string(team_id) + ";";
     char* cErrMsg;
     int   res = sqlite3_exec(db(), sql_str.c_str(), 0, 0, &cErrMsg);
     if (res != SQLITE_OK) {
@@ -1041,14 +1304,19 @@ bool TeamModule::DB_UpdateTeam(int team_id, const Team& team) const {
 }
 
 bool TeamModule::DB_InsertSignUp(int team_id, const Worker& worker) const {
-    string sql_str = "insert into player_signup_info (team_id,sendQQ,ownerQQ,game_id,signup_type,signup_status,xinfa_id) values (";
+    string sql_str = "insert into player_signup_info "
+                     "(team_id,sendQQ,ownerQQ,game_id,signup_type,signup_status,xinfa_id,create_datetime,update_datetime)"
+                     " values (";
+    auto now = time(0);
     sql_str += to_string(team_id) + ",'";
     sql_str += worker.sendQQ + "','";
     sql_str += worker.ownerQQ + "','";
     sql_str += worker.game_id + "',";
     sql_str += to_string(static_cast<int>(worker.type)) + ",";
     sql_str += to_string(static_cast<int>(worker.status)) + ",";
-    sql_str += to_string(static_cast<int>(worker.xinfa.xinfa_id)) + ");";
+    sql_str += to_string(static_cast<int>(worker.xinfa.xinfa_id)) + ",";
+    sql_str += to_string(now) + ",";
+    sql_str += to_string(now) + ");";
     char* cErrMsg;
     int   res = sqlite3_exec(db(), sql_str.c_str(), 0, 0, &cErrMsg);
     if (res != SQLITE_OK) {
@@ -1098,9 +1366,52 @@ bool TeamModule::DB_SelectSignUp(const int team_id, std::vector<Worker>* workers
     return true;
 }
 
+bool TeamModule::DB_SelectSignUp(const std::string& ownerQQ, std::vector<Worker>* workers) const {
+    string sql_str = "select * from player_signup_info where ownerQQ = '" + ownerQQ + "' and signup_type = ";
+    sql_str += to_string(static_cast<int>(WorkerType::Normal)) + " and ( signup_status = ";
+    sql_str += to_string(static_cast<int>(WorkerStatus::Normal));
+    sql_str += " or signup_status = " + to_string(static_cast<int>(WorkerStatus::Pigeon)) + " );";
+    char* cErrMsg;
+    int   res = sqlite3_exec(
+        db(), sql_str.c_str(),
+        [](auto vp, auto cnt, auto val, auto name) {
+            auto   p = static_cast<std::vector<Worker>*>(vp);
+            Worker q;
+            for (int i = 0; i < cnt; ++i) {
+                string s = name[i];
+                if (s == "game_id")
+                    q.game_id = val[i];
+                else if (s == "sendQQ")
+                    q.sendQQ = val[i];
+                else if (s == "ownerQQ")
+                    q.ownerQQ = val[i];
+                else if (s == "signup_type")
+                    q.type = static_cast<WorkerType>(stoi(val[i]));
+                else if (s == "signup_status")
+                    q.status = static_cast<WorkerStatus>(stoi(val[i]));
+                else if (s == "xinfa_id")
+                    q.xinfa.xinfa_id = static_cast<XinfaID>(stoi(val[i]));
+                else if (s == "update_datetime")
+                    q.update_time = stoll(val[i]);
+            }
+            p->push_back(q);
+            return 0;
+        },
+        workers, &cErrMsg);
+    if (res != SQLITE_OK) {
+        api->OutputLog("查找报名信息错误:" + string(cErrMsg));
+        return false;
+    }
+    for (auto& wk : *workers) {
+        wk.xinfa = xinfa_list_[static_cast<int>(wk.xinfa.xinfa_id)];
+    }
+    return true;
+}
+
 bool TeamModule::DB_UpdateSignUpStatus(int team_id, const std::string& game_id, WorkerStatus status) const {
     string sql_str = "update player_signup_info set ";
     sql_str += "signup_status = " + to_string(static_cast<int>(status));
+    sql_str += " , update_datetime = " + to_string(time(0));
     sql_str += " where game_id = '" + game_id;
     sql_str += "' and team_id=" + to_string(team_id) + ";";
     char* cErrMsg;
